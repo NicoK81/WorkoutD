@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, Button, Alert, } from 'react-native';
+import { View, Text, TextInput, Button, Alert, KeyboardAvoidingView, Platform, Modal, TouchableOpacity } from 'react-native';
 import { WorkoutContext } from './WorkoutContext';
 import { Calendar } from 'react-native-calendars';
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -15,9 +15,8 @@ export default function AddExerciseScreen() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [showCalendar, setShowCalendar] = useState(false);
 
-  
-  const [open, setOpen] = useState(false); 
-  const [value, setValue] = useState('Select'); 
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState('Select');
   const [items, setItems] = useState([
     {
       label: 'Running',
@@ -45,13 +44,23 @@ export default function AddExerciseScreen() {
     const numericDistance = parseFloat(distance);
     const numericDuration = parseFloat(duration);
 
-    if (numericDistance <= 0 || numericDuration <= 0) {
-      Alert.alert('Error', 'Distance and duration must be positive numbers.');
+    if (value === 'Select' || !value) {
+      Alert.alert('Error', 'Please select a sport first.');
+      return;
+    }
+
+    if (!distance || isNaN(numericDistance) || numericDistance <= 0) {
+      Alert.alert('Error', 'Please enter a valid distance greater than zero.');
+      return;
+    }
+
+    if (!duration || isNaN(numericDuration) || numericDuration <= 0) {
+      Alert.alert('Error', 'Please enter a valid duration greater than zero.');
       return;
     }
 
     const workout = {
-      sport: value, 
+      sport: value,
       distance: unit === 'miles' ? numericDistance * 1.60934 : numericDistance,
       duration: numericDuration,
       date,
@@ -62,60 +71,83 @@ export default function AddExerciseScreen() {
     setDistance('');
     setDuration('');
     setDate(new Date().toISOString().split('T')[0]);
+    setValue('Select');
   };
 
   return (
-    <View style={style.container}>
-      <Text style={style.label}>Sport:</Text>
+    <KeyboardAvoidingView
+      style={style.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View>
+        <Text style={style.label}>Sport:</Text>
 
-      {/* DropDownPicker component */}
-      <DropDownPicker
-        open={open}
-        value={value}
-        items={items}
-        setOpen={setOpen}
-        setValue={setValue}
-        setItems={setItems}
-        placeholder="Select Sport"
-        style={style.dropdown}
-        showArrowIcon={true}
-      />
-
-      <Text style={style.labelEX}>Distance ({unit}):</Text>
-      <TextInput
-        style={style.input}
-        value={distance}
-        onChangeText={setDistance}
-        keyboardType="numeric"
-        placeholder="Enter Distance"
-      />
-
-      <Text style={style.labelEX}>Duration (minutes):</Text>
-      <TextInput
-        style={style.input}
-        value={duration}
-        onChangeText={setDuration}
-        keyboardType="numeric"
-        placeholder="Enter Duration"
-      />
-
-      <Text style={style.labelEX}>Date: {date}</Text>
-      <Button title="Select Date" onPress={() => setShowCalendar(!showCalendar)} />
-      {showCalendar && (
-        <Calendar
-          current={date}
-          onDayPress={(day) => {
-            setDate(day.dateString);
-            setShowCalendar(false);
-          }}
-          markedDates={{
-            [date]: { selected: true, selectedColor: 'blue' },
-          }}
+        {/* DropDownPicker component */}
+        <DropDownPicker
+          open={open}
+          value={value}
+          items={items}
+          setOpen={setOpen}
+          setValue={setValue}
+          setItems={setItems}
+          placeholder="Select Sport"
+          style={style.dropdown}
+          showArrowIcon={true}
         />
-      )}
 
-      <Button title="Add Workout" onPress={addWorkout} />
-    </View>
+        <Text style={style.labelEX}>Distance ({unit}):</Text>
+        <TextInput
+          style={style.input}
+          value={distance}
+          onChangeText={setDistance}
+          keyboardType="numeric"
+          placeholder="Enter Distance"
+        />
+
+        <Text style={style.labelEX}>Duration (minutes):</Text>
+        <TextInput
+          style={style.input}
+          value={duration}
+          onChangeText={setDuration}
+          keyboardType="numeric"
+          placeholder="Enter Duration"
+        />
+
+        <Text style={style.labelEX}>Date: {date}</Text>
+        <Button title="Select Date" onPress={() => setShowCalendar(true)} />
+
+        {/* Modal for Calendar */}
+        <Modal
+          transparent={true}
+          animationType="slide"
+          visible={showCalendar}
+          onRequestClose={() => setShowCalendar(false)}
+        >
+          <View style={style.modalContainer}>
+            <View style={style.modalContent}>
+              <Calendar
+                current={date}
+                onDayPress={(day) => {
+                  setDate(day.dateString);
+                  setShowCalendar(false);
+                }}
+                markedDates={{
+                  [date]: { selected: true, selectedColor: 'blue' },
+                }}
+              />
+              <TouchableOpacity
+                style={style.modalCloseButton}
+                onPress={() => setShowCalendar(false)}
+              >
+                <Text style={style.modalCloseText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        <Button title="Add Workout" onPress={addWorkout} />
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
